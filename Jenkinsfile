@@ -13,7 +13,7 @@ pipeline {
         stage('Pull from GitHub') {
             steps {
                 echo 'Pulling latest code...'
-                git branch: 'main', url: 'https://github.com/ramdhanifauzi21/wayshub-frontend'
+                git branch: 'main', url: 'https://github.com/kelompok1-dumbways/wayshub-frontend'
             }
         }
 
