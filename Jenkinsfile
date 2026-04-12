@@ -45,7 +45,7 @@ pipeline {
                             docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest &&
                             docker stop wayshub-frontend || true &&
                             docker rm wayshub-frontend || true &&
-                            docker run -d --name wayshub-frontend --network wayshub-docker_wayshub-net -p 3000:3000 ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                            docker run -d --name wayshub-frontend --network team1-network -p 3000:3000 ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
                         '
                     """
                 }
