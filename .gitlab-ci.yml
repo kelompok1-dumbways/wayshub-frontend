@@ -1,0 +1,65 @@
+variables:
+  IMAGE_NAME: "ramdhanifauzi/wayshub-frontend"
+  IMAGE_TAG: "latest"
+  SERVER_USER: "kelompok-1"
+  SERVER_IP: "10.71.208.250"
+  APP_PATH: "~/wayshub-app/wayshub-production/wayshub-frontend"
+
+stages:
+  - pull
+  - build
+  - test
+  - push
+  - deploy
+  - notify
+
+pull:
+  stage: pull
+  script:
+    - git pull origin main
+
+build:
+  stage: build
+  script:
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+
+test:
+  stage: test
+  script:
+    - docker run --rm $IMAGE_NAME:$IMAGE_TAG npm test -- --watchAll=false --passWithNoTests
+
+push:
+  stage: push
+  script:
+    - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
+    - docker push $IMAGE_NAME:$IMAGE_TAG
+
+deploy:
+  stage: deploy
+  before_script:
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+  script:
+    - ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "
+        cd $APP_PATH &&
+        docker compose pull &&
+        docker compose up -d --build
+      "
+
+notify_success:
+  stage: notify
+  script:
+    - |
+      curl -H "Content-Type: application/json" \
+      -d "{\"content\": \"✅ Build SUCCESS - $CI_PROJECT_NAME pipeline #$CI_PIPELINE_ID berhasil!\"}" \
+      $DISCORD_WEBHOOK
+  when: on_success
+
+notify_failure:
+  stage: notify
+  script:
+    - |
+      curl -H "Content-Type: application/json" \
+      -d "{\"content\": \"❌ Build FAILED - $CI_PROJECT_NAME pipeline #$CI_PIPELINE_ID gagal!\"}" \
+      $DISCORD_WEBHOOK
+  when: on_failure
