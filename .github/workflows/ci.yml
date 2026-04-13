@@ -1,0 +1,70 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  pull:
+    runs-on: self-hosted
+    steps:
+      - name: Pull from Repository
+        uses: actions/checkout@v3
+
+  build:
+    runs-on: self-hosted
+    needs: pull
+    steps:
+      - name: Build Docker Image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/wayshub-frontend:latest .
+
+  test:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Test Application
+        run: docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/wayshub-frontend:latest npm test -- --watchAll=false --passWithNoTests
+
+  push:
+    runs-on: self-hosted
+    needs: test
+    steps:
+      - name: Push to Docker Hub
+        run: |
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/wayshub-frontend:latest
+
+  deploy:
+    runs-on: self-hosted
+    needs: push
+    steps:
+      - name: Deploy Application
+        uses: appleboy/ssh-action@master
+        with:
+          host: 10.71.208.250
+          username: kelompok-1
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/wayshub-app/wayshub-production/wayshub-frontend
+            docker compose pull
+            docker compose up -d --build
+
+  notify:
+    runs-on: self-hosted
+    needs: [pull, build, test, push, deploy]
+    if: always()
+    steps:
+      - name: Notify Discord Success
+        if: ${{ needs.deploy.result == 'success' }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d "{\"content\": \"✅ Build SUCCESS - ${{ github.repository }} pipeline #${{ github.run_number }} berhasil!\"}" \
+          ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Notify Discord Failure
+        if: ${{ needs.deploy.result == 'failure' }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d "{\"content\": \"❌ Build FAILED - ${{ github.repository }} pipeline #${{ github.run_number }} gagal!\"}" \
+          ${{ secrets.DISCORD_WEBHOOK }}
