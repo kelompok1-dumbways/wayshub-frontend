@@ -46,9 +46,9 @@ jobs:
           username: kelompok-1
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/wayshub-app/wayshub-production/wayshub-frontend
-            docker compose down
-            docker compose up -d --build
+            cd ~/wayshub-app/wayshub-production
+            docker compose down -f docker-compose.yaml down
+            docker compose -f docker-compose.yaml  up -d --build
 
   notify:
     runs-on: self-hosted
