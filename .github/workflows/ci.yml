@@ -47,7 +47,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/wayshub-app/wayshub-production/wayshub-frontend
-            docker compose pull
+            docker compose down
             docker compose up -d --build
 
   notify:
